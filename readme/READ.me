@@ -1,0 +1,141 @@
+# Terraform VPC Module
+
+This submodule is part of the the `terraform-google-network` module. It creates a vpc network and optionally enables it as a Shared VPC host project.
+
+It supports creating:
+
+- A VPC Network
+- Optionally enabling the network as a Shared VPC host
+
+## Usage
+
+Basic usage of this submodule is as follows:
+
+```hcl
+module "vpc" {
+    source  = "terraform-google-modules/network/google//modules/vpc"
+    version = "~> 2.0.0"
+
+    project_id   = "<PROJECT ID>"
+    network_name = "example-vpc"
+
+    shared_vpc_host = false
+}
+```
+
+<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| auto\_create\_subnetworks | When set to true, the network is created in 'auto subnet mode' and it will create a subnet for each region automatically across the 10.128.0.0/9 address range. When set to false, the network is created in 'custom subnet mode' so the user can explicitly connect subnetwork resources. | `bool` | `false` | no |
+| delete\_default\_internet\_gateway\_routes | If set, ensure that all routes within the network specified whose names begin with 'default-route' and with a next hop of 'default-internet-gateway' are deleted | `bool` | `false` | no |
+| description | An optional description of this resource. The resource must be recreated to modify this field. | `string` | `""` | no |
+| mtu | The network MTU. Must be a value between 1460 and 1500 inclusive. If set to 0 (meaning MTU is unset), the network will default to 1460 automatically. | `number` | `0` | no |
+| network\_name | The name of the network being created | `any` | n/a | yes |
+| project\_id | The ID of the project where this VPC will be created | `any` | n/a | yes |
+| routing\_mode | The network routing mode (default 'GLOBAL') | `string` | `"GLOBAL"` | no |
+| shared\_vpc\_host | Makes this project a Shared VPC host if 'true' (default 'false') | `bool` | `false` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| network | The VPC resource being created |
+| network\_id | The ID of the VPC being created |
+| network\_name | The name of the VPC being created |
+| network\_self\_link | The URI of the VPC being created |
+| project\_id | VPC project id |
+
+<br>
+
+# Terraform Subnets Module
+
+This submodule is part of the the `terraform-google-network` module. It creates the individual vpc subnets.
+
+It supports creating:
+
+- Subnets within vpc network.
+
+## Usage
+
+Basic usage of this submodule is as follows:
+
+```hcl
+module "vpc" {
+    source  = "terraform-google-modules/network/google//modules/subnets"
+    version = "~> 2.0.0"
+
+    project_id   = "<PROJECT ID>"
+    network_name = "example-vpc"
+
+    subnets = [
+        {
+            subnet_name           = "subnet-01"
+            subnet_ip             = "10.10.10.0/24"
+            subnet_region         = "us-west1"
+        },
+        {
+            subnet_name           = "subnet-02"
+            subnet_ip             = "10.10.20.0/24"
+            subnet_region         = "us-west1"
+            subnet_private_access = "true"
+            subnet_flow_logs      = "true"
+            description           = "This subnet has a description"
+        },
+        {
+            subnet_name               = "subnet-03"
+            subnet_ip                 = "10.10.30.0/24"
+            subnet_region             = "us-west1"
+            subnet_flow_logs          = "true"
+            subnet_flow_logs_interval = "INTERVAL_10_MIN"
+            subnet_flow_logs_sampling = 0.7
+            subnet_flow_logs_metadata = "INCLUDE_ALL_METADATA"
+        }
+    ]
+
+    secondary_ranges = {
+        subnet-01 = [
+            {
+                range_name    = "subnet-01-secondary-01"
+                ip_cidr_range = "192.168.64.0/24"
+            },
+        ]
+
+        subnet-02 = []
+    }
+}
+```
+
+<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| network\_name | The name of the network where subnets will be created | `any` | n/a | yes |
+| project\_id | The ID of the project where subnets will be created | `any` | n/a | yes |
+| secondary\_ranges | Secondary ranges that will be used in some of the subnets | `map(list(object({ range_name = string, ip_cidr_range = string })))` | `{}` | no |
+| subnets | The list of subnets being created | `list(map(string))` | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| subnets | The created subnet resources |
+
+<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+
+### Subnet Inputs
+
+The subnets list contains maps, where each object represents a subnet. Each map has the following inputs (please see examples folder for additional references):
+
+| Name                         | Description                                                                                                     |  Type  |         Default          | Required |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- | :----: | :----------------------: | :------: |
+| subnet\_name                 | The name of the subnet being created                                                                            | string |            -             |   yes    |
+| subnet\_ip                   | The IP and CIDR range of the subnet being created                                                               | string |            -             |   yes    |
+| subnet\_region               | The region where the subnet will be created                                                                     | string |            -             |   yes    |
+| subnet\_private\_access      | Whether this subnet will have private Google access enabled                                                     | string |        `"false"`         |    no    |
+| subnet\_flow\_logs           | Whether the subnet will record and send flow log data to logging                                                | string |        `"false"`         |    no    |
+| subnet\_flow\_logs\_interval | If subnet\_flow\_logs is true, sets the aggregation interval for collecting flow logs                           | string |    `"INTERVAL_5_SEC"`    |    no    |
+| subnet\_flow\_logs\_sampling | If subnet\_flow\_logs is true, set the sampling rate of VPC flow logs within the subnetwork                     | string |         `"0.5"`          |    no    |
+| subnet\_flow\_logs\_metadata | If subnet\_flow\_logs is true, configures whether metadata fields should be added to the reported VPC flow logs | string | `"INCLUDE_ALL_METADATA"` |    no    |
